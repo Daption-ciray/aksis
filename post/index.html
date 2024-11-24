@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>POST Request in New Tab</title>
+</head>
+<body>
+    <h1>POST Request in New Tab</h1>
+    <button onclick="sendPostRequest()">Send POST Request in New Tab</button>
+
+    <script>
+        function sendPostRequest() {
+            // API URL
+            const url = 'https://obs.istanbul.edu.tr/OgrenimBilgileri/SinavSonuclariVeNotlar/GetOgrenciSinavSonuc';
+            
+            // İstek gövdesi verileri
+            const data = {
+                yil: '2024', 
+                donem: '1',
+
+            };
+
+            // Yeni bir form öğesi oluşturma
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            form.target = '_blank';  // Yeni sekmede açmak için
+
+            // Form verilerini ekleme
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = data[key];
+                    form.appendChild(input);
+                }
+            }
+
+            // Formu belgenin gövdesine ekleyip gönderme
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);  // Formu temizleme
+        }
+    </script>
+</body>
+</html>
