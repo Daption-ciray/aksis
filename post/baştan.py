@@ -41,8 +41,8 @@ def check_aksis_api(session, api_url):
 def post_to_obs_results(session, url):
     payload = {
         "group": "DersAdi-asc",
-        "yil": "2024",
-        "donem": "1"
+        "yil": year,
+        "donem": semester
     }
     response = session.post(url, data=payload)
     if response.status_code == 200:
@@ -55,6 +55,10 @@ def post_to_obs_results(session, url):
 def main():
     username = input("TC: ")
     password = input("Şifre: ")
+    global year
+    year = input("Yıl: ")
+    global semester
+    semester = input("Dönem: ")
     aksis_login_url = "https://aksis.istanbul.edu.tr/Account/LogOn"
     aksis_api_url = "https://aksis.istanbul.edu.tr/Home/Check667ForeignStudent"
     obs_url = "https://obs.istanbul.edu.tr"
