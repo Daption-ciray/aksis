@@ -1,3 +1,4 @@
+import os
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -6,14 +7,22 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-# Email credentials
-SENDER_EMAIL = "ciraygokalp@gmail.com"   # Your email address
-SENDER_PASSWORD = "ejgb qwtm kiul ygig" # Your email password (or use an app-specific password for Gmail)
-TO_EMAIL = "kayamuhammetibrahimm@gmail.com"  # Recipient email address
+# Email credentials from environment variables
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')   # Your email address
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') # Your email password (or use an app-specific password for Gmail)
+TO_EMAIL = os.getenv('TO_EMAIL')  # Recipient email address
+
+# Check if all email credentials are set
+if not all([SENDER_EMAIL, SENDER_PASSWORD, TO_EMAIL]):
+    raise ValueError("Email credentials are not fully set. Please set them as environment variables.")
 
 # Driver setup for Edge
-USERNAME = "28640517788"
-PASSWORD = "Asdzxc'34"
+USERNAME = os.getenv('USERNAME')   # Your Aksis username
+PASSWORD = os.getenv('PASSWORD')   # Your Aksis password
+
+# Check if all Aksis credentials are set
+if not all([USERNAME, PASSWORD]):
+    raise ValueError("Aksis credentials are not fully set. Please set them as environment variables.")
 
 options = webdriver.EdgeOptions()
 options.add_argument("--inprivate")  # Edge equivalent of incognito mode
@@ -39,8 +48,11 @@ driver.get("https://obs.istanbul.edu.tr/")
 time.sleep(1)
 
 # Close the pop-up
-close_button = driver.find_element(By.XPATH, "//button[@data-dismiss='modal' and @aria-hidden='true']")
-close_button.click()
+try:
+    close_button = driver.find_element(By.XPATH, "//button[@data-dismiss='modal' and @aria-hidden='true']")
+    close_button.click()
+except Exception as e:
+    print("No pop-up found: ", e)
 
 # Navigate to marks page
 driver.get("https://obs.istanbul.edu.tr/OgrenimBilgileri/SinavSonuclariVeNotlar/Index")
