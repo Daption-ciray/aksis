@@ -3,9 +3,12 @@ import aiohttp
 import pandas as pd
 from bs4 import BeautifulSoup
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes, JobQueue
 from decouple import config
 from aiohttp.client_exceptions import ContentTypeError
+import csv
+import os
+import asyncio
 
 # Bot'un API Token'ını .env dosyasından alın
 API_TOKEN = config("API_TOKEN")
@@ -15,6 +18,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+# Kullanıcıları takip etmek için bir veri yapısı
+subscribed_users = set()
 
 # Aksis İşlevleri
 async def get_verification_token(session, url):
@@ -68,12 +74,11 @@ def extract_relevant_data(data):
             if 'Items' in entry:
                 for item in entry['Items']:
                     relevant_data.append({
-                        'Yıl': item['Yil'],
-                        'Dönem': item['EnumDonem'],
-                        'Ders Adı': item['DersAdi'],
-                        'Sınav Adı': item['SinavAdi'],
-                        'Sınav Tarihi': item['SinavTarihiString'],
-                        'Notu': item['Notu']
+                        'SinavID': item['SinavID'],
+                        'DersAdi': item['DersAdi'],
+                        'Donem': 'Güz' if item['EnumDonem'] == 1 else 'Bahar',
+                        'Vize Tarihi': item.get('SinavTarihiString', 'N/A'),
+                        'Notu': item.get('Notu', 'N/A')
                     })
     return relevant_data
 
@@ -83,7 +88,7 @@ async def format_results_as_text(data):
     """
     relevant_data = extract_relevant_data(data)
     if not relevant_data:
-        return "Sonuç Mevcut Değil."
+        return "Geçersiz veya boş veri, sonuç görüntülenemiyor."
 
     # DataFrame oluştur ve sütunları hizala
     df = pd.DataFrame(relevant_data)
@@ -91,8 +96,46 @@ async def format_results_as_text(data):
     
     return f"Sonuçlar:\n\n```\n{formatted_text}\n```"
 
+async def notify_users(context: ContextTypes.DEFAULT_TYPE, new_entries):
+    for entry in new_entries:
+        message = f"{entry['DersAdi']} Açıklandı"
+        for user_id in subscribed_users:
+            await context.bot.send_message(chat_id=user_id, text=message)
+
+async def check_csv_for_updates(context: ContextTypes.DEFAULT_TYPE):
+    global last_known_ids  # Önceden bilinen SinavID'leri global olarak tanımlayın
+    file_path = "dersler.csv"
+
+    if not os.path.exists("dersler.csv"):
+        logging.warning("CSV dosyası bulunamadı.")
+        return
+    
+    new_entries = []
+    try:
+        with open('dersler.csv', mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            current_ids = set()
+            for row in reader:
+                sinav_id = row.get('SinavID')
+                if sinav_id:
+                    current_ids.add(sinav_id)  # Şu anki tüm SinavID'leri oku
+                    if sinav_id not in last_known_ids:
+                        new_entries.append(row)  # Yeni ID'leri topla
+
+            # Yeni girişler için kullanıcıları bilgilendir
+            if new_entries:
+                logging.info(f"Yeni {len(new_entries)} giriş bulundu.")
+                await notify_users(context, new_entries)
+
+            # Güncellenmiş ID'leri kaydet
+            last_known_ids = current_ids
+
+    except Exception as e:
+        logging.error(f"CSV güncellemelerini kontrol ederken hata: {e}")
+last_known_ids = set()
 # Telegram bot işlevleri
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    subscribed_users.add(update.message.chat_id)
     await update.message.reply_text('Merhaba! Ben bir Telegram botuyum. Size nasıl yardımcı olabilirim? /login komutunu kullanarak giriş yapabilirsiniz.')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -179,6 +222,10 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(login_conv_handler)
+
+    # JobQueue oluştur ve CSV dosyasını kontrol eden görevi ekle
+    job_queue = application.job_queue
+    job_queue.run_repeating(check_csv_for_updates, interval=10, first=0)
 
     application.run_polling()
 

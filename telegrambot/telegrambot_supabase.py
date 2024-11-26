@@ -126,14 +126,6 @@ class TelegramBot:
                 year = context.user_data.get("year")
                 semester = context.user_data.get("semester")
 
-                # Here you would implement the actual login logic to Aksis
-                # For example:
-                # login_data = {
-                #     "UserName": username,
-                #     "Password": password,
-                # }
-                # async with session.post(Config.AKSIS_LOGIN_URL, data=login_data) as response:
-                #     # Handle login response
                 
                 await update.message.reply_text("İşlem tamamlandı!")
                 
