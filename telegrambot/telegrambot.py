@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes
 from decouple import config
+from aiohttp.client_exceptions import ContentTypeError
 
 # Bot'un API Token'ını .env dosyasından alın
 API_TOKEN = config("API_TOKEN")
@@ -42,7 +43,7 @@ async def check_aksis_api(session, api_url):
             try:
                 json_response = await response.json()
                 return json_response.get('IsSuccess') == True
-            except ValueError:
+            except ContentTypeError:
                 return False
         return False
 
@@ -82,7 +83,7 @@ async def format_results_as_text(data):
     """
     relevant_data = extract_relevant_data(data)
     if not relevant_data:
-        return "Geçersiz veya boş veri, sonuç görüntülenemiyor."
+        return "Sonuç Mevcut Değil."
 
     # DataFrame oluştur ve sütunları hizala
     df = pd.DataFrame(relevant_data)
@@ -104,25 +105,32 @@ async def login(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def get_tc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['username'] = update.message.text
-    await update.message.reply_text('Lütfen şifrenizi girin:')
+    await update.message.reply_text('🔑 Lütfen şifrenizi girin:')
     return 2
 
 async def get_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['password'] = update.message.text
-    await update.message.reply_text('Lütfen yıl bilgisini girin:')
+    await update.message.reply_text('📅 Lütfen yıl bilgisini girin:')
     return 3
 
 async def get_year(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['year'] = update.message.text
-    await update.message.reply_text('Lütfen dönem bilgisini girin:')
+    await update.message.reply_text('📅 Lütfen dönem bilgisini girin: Güz veya Bahar')
     return 4
 
 async def get_semester(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     username = context.user_data['username']
     password = context.user_data['password']
     year = context.user_data['year']
-    semester = update.message.text
-    
+    semester = update.message.text.lower()
+    if semester == "güz":
+        semester = "1"
+    elif semester == "bahar":
+        semester = "2"
+    else:
+        await update.message.reply_text("❌ Geçersiz dönem bilgisi, lütfen 'Güz' veya 'Bahar' olarak girin.")
+        return 4
+
     aksis_login_url = "https://aksis.istanbul.edu.tr/Account/LogOn"
     aksis_api_url = "https://aksis.istanbul.edu.tr/Home/Check667ForeignStudent"
     obs_url = "https://obs.istanbul.edu.tr"
@@ -133,20 +141,24 @@ async def get_semester(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         if token and await login_to_aksis(session, username, password, aksis_login_url, token):
             if await check_aksis_api(session, aksis_api_url):
-                async with session.get(obs_url):
-                    result = await post_to_obs_results(session, obs_post_url, year, semester)
-                    if result:
-                        # JSON verisini tablo olarak metne çevir ve gönder
-                        formatted_result = await format_results_as_text(result)
-                        await update.message.reply_text(
-                            formatted_result, parse_mode="Markdown"
-                        )
+                async with session.get(obs_url) as response_first:
+                    if response_first.status == 200:
+                        cookies = response_first.cookies
+                        result = await post_to_obs_results(session, obs_post_url, year, semester)
+                        if result:
+                            # JSON verisini tablo olarak metne çevir ve gönder
+                            formatted_result = await format_results_as_text(result)
+                            await update.message.reply_text(
+                                formatted_result, parse_mode="Markdown"
+                            )
+                        else:
+                            await update.message.reply_text("❌ POST isteğinde hata oluştu veya veri formatı geçersiz.")
                     else:
-                        await update.message.reply_text("POST isteğinde hata oluştu veya veri formatı geçersiz.")
+                        await update.message.reply_text(f"❌ İlk obs sayfasına erişim sağlanamadı: {response_first.status}")
             else:
-                await update.message.reply_text("Aksis API sayfasına erişim sağlanamadı.")
+                await update.message.reply_text("❌ Kimlik bilgileri yanlış. Lütfen tekrar deneyin.")
         else:
-            await update.message.reply_text("Aksis giriş başarısız.")
+            await update.message.reply_text("⚠️ Aksis giriş başarısız.")
     return ConversationHandler.END
 
 # Ana fonksiyon
