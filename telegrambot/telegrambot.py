@@ -76,7 +76,7 @@ def extract_relevant_data(data):
                     relevant_data.append({
                         #'SinavID': item['SinavID'],
                         'DersAdi': item['DersAdi'],
-                        #'Donem': 'Güz' if item['EnumDonem'] == 1 else 'Bahar',
+                        'Donem': 'Güz' if item['EnumDonem'] == 1 else 'Bahar',
                         #'Vize Tarihi': item.get('SinavTarihiString', 'N/A'),
                         'Notu': item.get('Notu', 'N/A')
                     })
