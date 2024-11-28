@@ -74,10 +74,10 @@ def extract_relevant_data(data):
             if 'Items' in entry:
                 for item in entry['Items']:
                     relevant_data.append({
-                        'SinavID': item['SinavID'],
+                        #'SinavID': item['SinavID'],
                         'DersAdi': item['DersAdi'],
-                        'Donem': 'Güz' if item['EnumDonem'] == 1 else 'Bahar',
-                        'Vize Tarihi': item.get('SinavTarihiString', 'N/A'),
+                        #'Donem': 'Güz' if item['EnumDonem'] == 1 else 'Bahar',
+                        #'Vize Tarihi': item.get('SinavTarihiString', 'N/A'),
                         'Notu': item.get('Notu', 'N/A')
                     })
     return relevant_data
@@ -106,15 +106,15 @@ async def check_csv_for_updates(context: ContextTypes.DEFAULT_TYPE):
     global last_known_ids  # Önceden bilinen SinavID'leri global olarak tanımlayın
     
     project_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = "./telegrambot/dersler.csv"
+    file_path = "datasets/dersler.csv"
 
-    if not os.path.exists("./telegrambot/dersler.csv"):
+    if not os.path.exists("datasets/dersler.csv"):
         logging.warning("CSV dosyası bulunamadı.")
         return
     
     new_entries = []
     try:
-        with open('dersler.csv', mode='r', newline='', encoding='utf-8') as file:
+        with open(file_path, mode='r', newline='', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             current_ids = set()
             for row in reader:
