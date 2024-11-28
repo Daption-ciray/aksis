@@ -104,9 +104,11 @@ async def notify_users(context: ContextTypes.DEFAULT_TYPE, new_entries):
 
 async def check_csv_for_updates(context: ContextTypes.DEFAULT_TYPE):
     global last_known_ids  # Önceden bilinen SinavID'leri global olarak tanımlayın
-    file_path = "dersler.csv"
+    
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = "./telegrambot/dersler.csv"
 
-    if not os.path.exists("dersler.csv"):
+    if not os.path.exists("./telegrambot/dersler.csv"):
         logging.warning("CSV dosyası bulunamadı.")
         return
     
