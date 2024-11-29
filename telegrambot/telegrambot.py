@@ -227,7 +227,7 @@ def main() -> None:
 
     # JobQueue oluştur ve CSV dosyasını kontrol eden görevi ekle
     job_queue = application.job_queue
-    job_queue.run_repeating(check_csv_for_updates, interval=10, first=0)
+    job_queue.run_repeating(check_csv_for_updates, interval=300, first=0)
 
     application.run_polling()
 

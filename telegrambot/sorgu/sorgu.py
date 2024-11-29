@@ -59,7 +59,7 @@ def save_to_csv(data):
     if 'Data' in data:
         with open('dersler.csv', mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            writer.writerow(['SinavID', 'Ders Adı'])
+            writer.writerow(['SinavID', 'DersAdi'])
             for entry in data['Data']:
                 if 'Items' in entry:
                     for item in entry['Items']:
